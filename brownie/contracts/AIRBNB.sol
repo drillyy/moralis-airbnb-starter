@@ -96,4 +96,64 @@ contract airbnb {
         );
         counter++;
     }
+
+    function checkBookings(uint256 id, string[] memory newBookings)
+        private
+        view
+        returns (bool)
+    {
+        for (uint256 i = 0; i < newBookings.length; i++) {
+            for (uint256 j = 0; j < rentals[id].datesBooked.length; j++) {
+                if (
+                    keccak256(abi.encodePacked(rentals[id].datesBooked[j])) ==
+                    keccak256(abi.encodePacked(newBookings[i]))
+                ) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function addDatesBooked(uint256 id, string[] memory newBookings)
+        public
+        payable
+    {
+        require(id < counter, "No such Rental");
+        require(
+            checkBookings(id, newBookings),
+            "Already Booked For Requested Date"
+        );
+        require(
+            msg.value ==
+                (rentals[id].pricePerDay * 1 ether * newBookings.length),
+            "Please submit the asking price in order to complete the purchase"
+        );
+
+        for (uint256 i = 0; i < newBookings.length; i++) {
+            rentals[id].datesBooked.push(newBookings[i]);
+        }
+        payable(owner).transfer(msg.value);
+        emit newDatesBooked(
+            newBookings,
+            id,
+            msg.sender,
+            rentals[id].city,
+            rentals[id].imgUrl
+        );
+    }
+
+    function getRental(uint256 id)
+        public
+        view
+        returns (
+            string memory,
+            uint256,
+            string[] memory
+        )
+    {
+        require(id < counter, "No such Rental");
+        rentalInfo storage s = rentals[id];
+        return (s.name, s.pricePerDay, s.datesBooked);
+    }
 }
